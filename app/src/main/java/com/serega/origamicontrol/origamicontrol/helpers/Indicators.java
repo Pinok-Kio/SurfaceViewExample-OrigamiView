@@ -1,4 +1,4 @@
-package com.serega.origamicontrol;
+package com.serega.origamicontrol.origamicontrol.helpers;
 
 
 import android.graphics.Canvas;
@@ -21,7 +21,7 @@ public class Indicators {
 		for (int i = 0; i < count; i++) {
 			circlePaint.setColor(i == currentPosition ? currentIndicatorColor : indicatorColor);
 			canvas.drawCircle(startX, height - radius * 3, radius, circlePaint);
-			startX += radius * 2 + gapBetween;
+			startX += (radius << 1) + gapBetween;
 		}
 	}
 }

@@ -1,4 +1,4 @@
-package com.serega.origamicontrol;
+package com.serega.origamicontrol.origamicontrol.helpers;
 
 import android.content.Context;
 import android.graphics.Bitmap;

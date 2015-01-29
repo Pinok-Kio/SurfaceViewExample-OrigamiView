@@ -1,9 +1,11 @@
-package com.serega.origamicontrol;
+package com.serega.origamicontrol.ui.activity;
 
+import android.content.Intent;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
-import android.view.Menu;
-import android.view.MenuItem;
+import com.serega.origamicontrol.origamicontrol.helpers.OrigamiAdapter;
+import com.serega.origamicontrol.origamicontrol.view.OrigamiView;
+import com.serega.origamicontrol.R;
 
 
 public class MainActivity extends ActionBarActivity {
@@ -12,7 +14,11 @@ public class MainActivity extends ActionBarActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        Intent intent = getIntent();
+        int selectedIndex = intent.getIntExtra(TestActivity.EXTRA_INDEX, 0);
+
 	    OrigamiView origamiView = (OrigamiView) findViewById(R.id.origami_view);
+        origamiView.setStartIndex(selectedIndex);
 
 	    int[] bitmaps = {
 			    R.mipmap.batman,
