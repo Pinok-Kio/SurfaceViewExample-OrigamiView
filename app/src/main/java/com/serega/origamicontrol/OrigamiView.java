@@ -4,16 +4,15 @@ import android.annotation.TargetApi;
 import android.content.Context;
 import android.graphics.*;
 import android.util.AttributeSet;
+import android.util.TypedValue;
 import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
 
-import java.util.ArrayList;
-import java.util.List;
-
 public class OrigamiView extends SurfaceView implements SurfaceHolder.Callback {
     private DrawThread drawThread;
+	private OrigamiAdapter adapter;
 
     public OrigamiView(Context context) {
         super(context);
@@ -38,10 +37,14 @@ public class OrigamiView extends SurfaceView implements SurfaceHolder.Callback {
         getHolder().addCallback(this);
 
         setOnTouchListener(new OnTouchListener() {
+            private final float TOUCH_TOLERANCE = 20;
+            float prevY = 0;
+
             @Override
             public boolean onTouch(View v, MotionEvent event) {
                 switch (event.getAction()) {
                     case MotionEvent.ACTION_DOWN:
+                        prevY = event.getY();
                         if (drawThread != null) {
                             drawThread.touch(event.getX(), event.getY());
                         }
@@ -49,7 +52,10 @@ public class OrigamiView extends SurfaceView implements SurfaceHolder.Callback {
 
                     case MotionEvent.ACTION_MOVE:
                         if (drawThread != null) {
-                            drawThread.update(event.getX(), event.getY());
+                            float y = event.getY();
+                            if (Math.abs(prevY - y) > TOUCH_TOLERANCE) {
+                                drawThread.update(event.getX(), y);
+                            }
                         }
                         return true;
 
@@ -66,9 +72,9 @@ public class OrigamiView extends SurfaceView implements SurfaceHolder.Callback {
 
     @Override
     public void surfaceCreated(SurfaceHolder holder) {
-        drawThread = new DrawThread();
-        drawThread.setRunning(true);
-
+	    drawThread = new DrawThread();
+	    drawThread.setAdapter(adapter);
+	    drawThread.setRunning(true);
         drawThread.start();
     }
 
@@ -94,49 +100,34 @@ public class OrigamiView extends SurfaceView implements SurfaceHolder.Callback {
 
     class DrawThread extends Thread {
         private boolean isRunning;
-        private float touchX;
-        private float touchY;
-        private List<Segment> segments;
         private boolean inTouch;
-        private boolean isPrepared = false;
-        private boolean isPrepared1 = false;
+        private final NewSegment s;
 
         DrawThread() {
-            segments = new ArrayList<>();
-
+            float gap = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, Config.DEFAULT_GAP_DP, getResources().getDisplayMetrics());
+	        s = new NewSegment(gap);
         }
+
+	    private void setAdapter(OrigamiAdapter adapter){
+		    s.setAdapter(adapter);
+	    }
 
         private void setRunning(boolean running) {
             isRunning = running;
         }
 
         private void touch(float x, float y) {
-            touchX = x;
-            touchY = y;
             inTouch = true;
-            isPrepared = false;
             prepareTouch(x, y);
         }
 
         private void update(float x, float y) {
-            touchX = x;
-            touchY = y;
-            for (Segment s : segments) {
-                if (s.process) {
-                    s.update(y);
-                }
-            }
+            s.update(y);
         }
 
         private void fingerUp(float x, float y) {
             inTouch = false;
-            segments.get(0).process = true;
-            if (segments.size() > 1) {
-                segments.get(1).process = false;
-            }
-            if (segments.size() > 2) {
-                segments.get(2).process = false;
-            }
+            s.processFingerUp();
         }
 
         @Override
@@ -151,21 +142,18 @@ public class OrigamiView extends SurfaceView implements SurfaceHolder.Callback {
                 if (canvas == null) {
                     return;
                 }
-                canvas.drawColor(Color.RED);
-                if (!inTouch) {
-//                    for (Segment s : segments) {
-//                        if (s.process) {
-//                            s.draw(canvas);
-//                        }
-//                    }
-                    segments.get(0).draw(canvas);
+                if (s.isBusy) {
+                    s.processBusy();
+                    s.draw(canvas);
+
+                } else
+	        if (!inTouch) {
+                    s.drawOrig(canvas);
                 } else {
-                    if(isPrepared) {
-                        for (Segment s : segments) {
-                            if (s.process) {
-                                s.draw(canvas);
-                            }
-                        }
+                    if (s.isPrepared) {
+                        s.draw(canvas);
+                    }else{
+//	                    s.drawOrig(canvas);
                     }
                 }
 
@@ -174,37 +162,57 @@ public class OrigamiView extends SurfaceView implements SurfaceHolder.Callback {
         }
 
         private void prepare() {
-            Segment segment = new Segment();
-            Bitmap bitmap = BitmapFactory.decodeResource(getResources(), R.mipmap.batman);
-            int width = getWidth();
-            int height = getHeight();
-            bitmap = Bitmap.createScaledBitmap(bitmap, width, height, false);
-            segment.setBitmap(bitmap);
-            segment.setRegion(new Rect(0, 0, getWidth(), getHeight()));
-            segment.process = true;
-            segments.add(segment);
+            OrigamiAdapter adapter = s.getAdapter();
+	        if(adapter == null){
+		        throw new IllegalStateException("OrigamiAdapter is NULL");
+	        }
+            Bitmap bitmap = adapter.getBitmap(getWidth(), getHeight(), 1);
+            s.setBitmap(bitmap);
+            s.setRectAll(0, 0, getWidth(), getHeight());
         }
 
         private void prepareTouch(float x, float y) {
-            Bitmap bitmap = segments.get(0).getBitmap();
-            segments.get(0).process = false;
-            Rect regionTop = new Rect(0, 0, getWidth(), (int) y);
-            Rect regionBottom = new Rect(0, (int) y, getWidth(), getHeight());
-            Segment topS = new Segment();
-            topS.type = Segment.SType.TOP;
-            topS.setBitmap(bitmap);
-            topS.setRegion(regionTop);
-            topS.initY = y;
-            topS.process = true;
-            Segment bottomS = new Segment();
-            bottomS.setBitmap(bitmap);
-            bottomS.setRegion(regionBottom);
-            bottomS.type = Segment.SType.BOTTOM;
-            segments.add(topS);
-            segments.add(bottomS);
-            bottomS.initY = y;
-            bottomS.process = true;
-            isPrepared = true;
+	        s.prepareTouch(y, getHeight() / 2);
+//	        s.prepareTouch(y, y);
+            s.isPrepared = false;
+        }
+
+        private void makeCentered(float y) {
+            RectF regionTop = new RectF(0, 0, getWidth(), getHeight() / 2);
+            RectF regionBottom = new RectF(0, getHeight() / 2, getWidth(), getHeight());
+            s.setRectTop(0, 0, getWidth(), getHeight() / 2);
+            s.setRectBottom(0, getHeight() / 2, getWidth(), getHeight());
+
+            s.setBitmapAreaTop(0, 0, getWidth(), (int) getHeight() / 2);
+            s.setBitmapAreaBottom(0, (int) getHeight() / 2, getWidth(), getHeight());
+            s.setRectBitmapTop(0, y , getWidth(), y);
+            s.setRectBitmapBottom(0, y, getWidth(), y );
+
+            s.setInnerRect(0, y, getWidth(), y);
+
+            s.touchY = getHeight() / 2;
+            s.currentY = y;
+
+        }
+
+        private void makeNotCentered(float y) {
+            RectF regionTop = new RectF(0, 0, getWidth(), y);
+            RectF regionBottom = new RectF(0, y, getWidth(), getHeight());
+            s.setRectTop(0, 0, getWidth(), y);
+            s.setRectBottom(0, y, getWidth(), getHeight());
+
+            s.setBitmapAreaTop(0, 0, getWidth(), (int) y);
+            s.setBitmapAreaBottom(0, (int) y, getWidth(), getHeight());
+            s.setRectBitmapTop(0, y, getWidth(), y);
+            s.setRectBitmapBottom(0, y, getWidth(), y);
+
+
+            s.setInnerRect(0, y, getWidth(), y);
+            s.touchY = y;
         }
     }
+
+	public void setAdapter(OrigamiAdapter adapter){
+		this.adapter = adapter;
+	}
 }
