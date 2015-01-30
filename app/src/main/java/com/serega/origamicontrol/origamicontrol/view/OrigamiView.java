@@ -198,25 +198,8 @@ public class OrigamiView extends SurfaceView implements SurfaceHolder.Callback, 
 		}
 
 		private void prepareTouch(float x, float y) {
-//			s.prepareTouch(y, getHeight() / 2);
-	        s.prepareTouch(y, y);
+	        s.prepareTouch(y);
 		}
-
-//        private void makeNotCentered(float y) {
-//            RectF regionTop = new RectF(0, 0, getWidth(), y);
-//            RectF regionBottom = new RectF(0, y, getWidth(), getHeight());
-//            s.setRectTop(0, 0, getWidth(), y);
-//            s.setRectBottom(0, y, getWidth(), getHeight());
-//
-//            s.setBitmapAreaTop(0, 0, getWidth(), (int) y);
-//            s.setBitmapAreaBottom(0, (int) y, getWidth(), getHeight());
-//            s.setRectBitmapTop(0, y, getWidth(), y);
-//            s.setRectBitmapBottom(0, y, getWidth(), y);
-//
-//
-//            s.setInnerRect(0, y, getWidth(), y);
-//            s.touchY = y;
-//        }
 	}
 
 	public void setAdapter(OrigamiAdapter adapter) {
