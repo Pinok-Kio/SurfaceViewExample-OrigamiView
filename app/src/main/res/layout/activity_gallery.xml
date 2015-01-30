@@ -18,60 +18,66 @@
                 android:layout_width="150dp"
                 android:layout_height="150dp"
                 android:id="@+id/image_1"
-                android:background="@drawable/batman"
-                android:scaleType="fitCenter"
-                android:layout_marginRight="16dp" />
+                android:layout_marginRight="16dp"
+                android:elevation="10dp"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="8dp" />
 
             <ImageView
                 android:layout_width="150dp"
                 android:layout_height="150dp"
                 android:id="@+id/image_2"
-                android:background="@drawable/jocker"
-                android:scaleType="fitCenter" />
+                android:elevation="10dp"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="8dp" />
         </LinearLayout>
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center"
-            android:layout_marginTop="16dp">
+            android:layout_marginTop="8dp">
 
             <ImageView
                 android:layout_width="150dp"
                 android:layout_height="150dp"
                 android:id="@+id/image_3"
-                android:background="@drawable/cat"
-                android:scaleType="fitCenter"
-                android:layout_marginRight="16dp" />
+                android:layout_marginRight="16dp"
+                android:elevation="10dp"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="8dp"/>
 
             <ImageView
                 android:layout_width="150dp"
                 android:layout_height="150dp"
                 android:id="@+id/image_4"
-                android:background="@drawable/cobblepot"
-                android:scaleType="fitCenter" />
+                android:elevation="10dp"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="8dp"/>
         </LinearLayout>
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center"
-            android:layout_marginTop="16dp">
+            android:layout_marginTop="8dp">
 
             <ImageView
                 android:layout_width="150dp"
                 android:layout_height="150dp"
                 android:id="@+id/image_5"
-                android:background="@drawable/bane"
-                android:scaleType="fitCenter"
-                android:layout_marginRight="16dp" />
+                android:layout_marginRight="16dp"
+                android:elevation="10dp"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="8dp"/>
 
             <ImageView
                 android:layout_width="150dp"
                 android:layout_height="150dp"
                 android:id="@+id/image_6"
-                android:background="@drawable/jocker_dark"
-                android:scaleType="fitCenter" />
+                android:elevation="10dp"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="8dp"/>
         </LinearLayout>
 
     </LinearLayout>
