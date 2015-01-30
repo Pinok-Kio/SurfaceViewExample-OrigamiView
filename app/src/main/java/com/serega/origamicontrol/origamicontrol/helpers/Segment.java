@@ -69,7 +69,7 @@ public class Segment {
     private boolean isBusy;
     private boolean switched;
     private boolean proceed = true;
-    private boolean useCenterPoint = true;
+    private boolean useCenterPoint = false;
     private boolean fingerWasUp = true;
     private boolean nextBitmapPrepared;
     private boolean prevBitmapPrepared;
@@ -172,7 +172,6 @@ public class Segment {
         proceed = true;
         fingerWasUp = false;
         fingerPath = 0;
-
         nextBitmapPrepared = false;
         prevBitmapPrepared = false;
     }
@@ -203,7 +202,6 @@ public class Segment {
         if (fingerWasUp) {
             return;
         }
-        Log.i("M_TOUCH", "update");
         this.moveTop = moveTop;
         fingerPath += (currentY - y);
         if (!isReady && Math.abs(fingerPath) > 10) {
@@ -288,6 +286,9 @@ public class Segment {
             }
             rectTop.set(left, top, right, bottom);
             float bTop = bitmapAreaTop.top - DISTANCE_STEP;
+            if(bTop < 0){
+                bTop = 0;
+            }
             float bBottom = bitmapAreaTop.bottom;
             bitmapAreaTop.set((int) left, (int) bTop, (int) right, (int) bBottom);
         } else {
@@ -344,6 +345,9 @@ public class Segment {
             rectBottom.set(left, top, right, bottom);
             float bTop = bitmapAreaBottom.top;
             float bBottom = bitmapAreaBottom.bottom + DISTANCE_STEP;
+            if(bBottom > rectAll.bottom){
+                bBottom = rectAll.bottom;
+            }
             bitmapAreaBottom.set((int) left, (int) bTop, (int) right, (int) bBottom);
         } else {
             if (innerRect.height() == 0) {
@@ -481,11 +485,6 @@ public class Segment {
             return;
         }
         isBusy = true;
-//        if (innerRect.top < rectAll.height() / 3) {
-//            currentState = State.STATE_OPENING_CURRENT;
-//        } else {
-//            currentState = State.STATE_CLOSING_CURRENT;
-//        }
 
         if (fingerPath > 0) {
             if (fingerPath > viewOpeningThreshold) {
@@ -523,7 +522,9 @@ public class Segment {
                 processOpening();
                 if (innerRect.top <= 0 && innerRect.bottom >= rectAll.bottom) {
                     switchBitmapsNext();
-                    moveBitmapIndex(1);
+                    if(Math.round(fingerPath) > viewOpeningThreshold) {
+                        moveBitmapIndex(1);
+                    }
                     isBusy = false;
                 }
                 break;
@@ -541,17 +542,17 @@ public class Segment {
     }
 
     private void switchBitmapsNext() {
-        Bitmap tmp = bitmapBatman;
-        bitmapBatman = innerBitmap;
-        innerBitmap = tmp;
-
-        switched = true;
-
         rectTop.set(0, 0, rectAll.right, rectAll.centerY());
         rectBottom.set(0, rectAll.centerY(), rectAll.right, rectAll.bottom);
 
         bitmapAreaTop.set(0, 0, (int) rectAll.right, (int) rectAll.centerY());
         bitmapAreaBottom.set(0, (int) rectAll.centerY(), (int) rectAll.right, (int) rectAll.bottom);
+
+        Bitmap tmp = bitmapBatman;
+        bitmapBatman = innerBitmap;
+        innerBitmap = tmp;
+
+        switched = true;
     }
 
     private void swapRegions() {
@@ -563,13 +564,13 @@ public class Segment {
 
         float left = rectTop.left;
         float right = rectTop.right;
-        int bBottom = useCenterPoint ? (int) rectAll.centerY() : (int) touchY;
+        int bBottom = useCenterPoint ? (int) innerRect.centerY() : (int) touchY;
         int bTop = bBottom - (int) rectTop.height();
         bitmapAreaTop.set((int) left, bTop, (int) right, bBottom);
 
         left = rectBottom.left;
         right = rectBottom.right;
-        bTop = useCenterPoint ? (int) rectAll.centerY() : (int) touchY;
+        bTop = useCenterPoint ? (int) innerRect.centerY() : (int) touchY;
         bBottom = bTop + (int) rectBottom.height();
         bitmapAreaBottom.set((int) left, bTop, (int) right, bBottom);
     }
