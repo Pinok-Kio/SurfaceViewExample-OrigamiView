@@ -153,17 +153,17 @@ public class Segment {
         float height = rectAll.height();
         float centerY = rectAll.centerY();
 
-        rectTop.set(0, 0, width, centerY);
-        rectBottom.set(0, centerY, width, height);
+//        rectTop.set(0, 0, width, centerY);
+//        rectBottom.set(0, centerY, width, height);
 
-//        rectTop.set(0, 0, width, y);
-//        rectBottom.set(0, y, width, height);
+        rectTop.set(0, 0, width, y);
+        rectBottom.set(0, y, width, height);
 
-        bitmapAreaTop.set(0, 0, (int) width, (int) centerY);
-        bitmapAreaBottom.set(0, (int) centerY, (int) width, (int) height);
+//        bitmapAreaTop.set(0, 0, (int) width, (int) centerY);
+//        bitmapAreaBottom.set(0, (int) centerY, (int) width, (int) height);
 
-//        bitmapAreaTop.set(0, 0, (int) width, (int) y);
-//        bitmapAreaBottom.set(0, (int) y, (int) width, (int) height);
+        bitmapAreaTop.set(0, 0, (int) width, (int) y);
+        bitmapAreaBottom.set(0, (int) y, (int) width, (int) height);
 
         rectBitmapTop.set(0, y, width, y);
         rectBitmapBottom.set(0, y, width, y);
@@ -178,7 +178,6 @@ public class Segment {
     public void update(float y, boolean moveTop) {
         this.moveTop = moveTop;
         fingerPath += (currentY - y);
-        Log.i("M_PATH", fingerPath + ", curr=" + currentY + ", y=" + y);
         if (!isReady) {
             prepare();
         }
@@ -247,10 +246,11 @@ public class Segment {
     private void closingRegionTop() {
         float left = rectTop.left;
         float right = rectTop.right;
-        float top = rectTop.top;
+        float top = 0;
         float bottom = rectTop.bottom;
 
         if (bottom < touchY) {
+            Log.i("M_MOVE", "closingRegionTop bottom < touchY, update: " + update + ", isBusy: " + isBusy);
             if (bottom + DISTANCE_STEP >= touchY) {
                 bottom = touchY;
             } else {
@@ -261,8 +261,10 @@ public class Segment {
             float bBottom = bitmapAreaTop.bottom;
             bitmapAreaTop.set((int) left, (int) bTop, (int) right, (int) bBottom);
         } else {
-            update = false;
-            proceed = false;
+//            update = false;
+            if (innerRect.height() == 0) {
+                proceed = false;
+            }
         }
     }
 
@@ -300,8 +302,9 @@ public class Segment {
         float left = rectBottom.left;
         float right = rectBottom.right;
         float top = rectBottom.top;
-        float bottom = rectBottom.bottom;
-        if (top >= touchY) {
+        float bottom = rectAll.bottom;
+        if (top > touchY) {
+            Log.i("M_MOVE", "closingRegionTop top >= touchY, update: " + update + ", isBusy: " + isBusy);
             if (top - DISTANCE_STEP < touchY) {
                 top = touchY;
             } else {
@@ -312,9 +315,13 @@ public class Segment {
             float bBottom = bitmapAreaBottom.bottom + DISTANCE_STEP;
             bitmapAreaBottom.set((int) left, (int) bTop, (int) right, (int) bBottom);
         } else {
-            update = false;
-            proceed = false;
+//            update = false;
+//            proceed = false;
+            if (innerRect.height() == 0) {
+                proceed = false;
+            }
         }
+
     }
 
     static Paint p = new Paint();
@@ -473,10 +480,10 @@ public class Segment {
         }
     }
 
-    private void moveBitmapIndex(){
-        if(moveTop){
+    private void moveBitmapIndex() {
+        if (moveTop) {
             bitmapIndex--;
-        }else{
+        } else {
             bitmapIndex++;
         }
     }
@@ -485,7 +492,7 @@ public class Segment {
         switch (currentState) {
             case STATE_OPENING_CURRENT:
                 processOpening();
-                if (innerRect.top <= 0) {
+                if (innerRect.top <= 0 && innerRect.bottom >= rectAll.bottom) {
                     switchBitmapsNext();
                     isBusy = false;
                 }
@@ -523,13 +530,15 @@ public class Segment {
 
         float left = rectTop.left;
         float right = rectTop.right;
-        int bBottom = (int) rectAll.centerY();
+//        int bBottom = (int) rectAll.centerY();
+        int bBottom = (int) touchY;
         int bTop = bBottom - (int) rectTop.height();
         bitmapAreaTop.set((int) left, bTop, (int) right, bBottom);
 
         left = rectBottom.left;
         right = rectBottom.right;
-        bTop = (int) rectAll.centerY();
+//        bTop = (int) rectAll.centerY();
+        bTop = (int) touchY;
         bBottom = bTop + (int) rectBottom.height();
         bitmapAreaBottom.set((int) left, bTop, (int) right, bBottom);
     }

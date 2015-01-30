@@ -198,8 +198,8 @@ public class OrigamiView extends SurfaceView implements SurfaceHolder.Callback, 
 		}
 
 		private void prepareTouch(float x, float y) {
-			s.prepareTouch(y, getHeight() / 2);
-//	        s.prepareTouch(y, y);
+//			s.prepareTouch(y, getHeight() / 2);
+	        s.prepareTouch(y, y);
 		}
 
 //        private void makeNotCentered(float y) {
