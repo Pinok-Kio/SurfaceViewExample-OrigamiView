@@ -121,7 +121,7 @@ public class OrigamiView extends SurfaceView implements SurfaceHolder.Callback, 
 			float gap = dpToPix(Config.DEFAULT_GAP_DP);
 			float threshold = dpToPix(Config.DEFAULT_VIEV_OPENING_THRESHOLD_DP);
 			s = new Segment(gap);
-			s.setViewOpeningThreshold(threshold);
+//			s.setViewOpeningThreshold(threshold);
 		}
 
 		private void setAdapter(OrigamiAdapter adapter) {
