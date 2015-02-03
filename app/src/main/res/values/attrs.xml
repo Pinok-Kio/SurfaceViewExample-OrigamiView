@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<declare-styleable name="OrigamiView">
+		<!--Default indicator color-->
+		<attr name="origamiIndicatorColor" format="color"/>
+
+		<!--Indicator color for current position-->
+		<attr name="origamiCurrentIndicatorColor" format="color"/>
+
+		<attr name="origamiBackgroundColor" format="color"/>
+
+		<!--Margin from left/right in center of inner image-->
+		<attr name="origamiCenterMargin" format="dimension"/>
+
+		<attr name="origamiDrawGradientShadow" format="boolean"/>
+		<attr name="origamiUseCenterOnly" format="boolean"/>
+	</declare-styleable>
+</resources>

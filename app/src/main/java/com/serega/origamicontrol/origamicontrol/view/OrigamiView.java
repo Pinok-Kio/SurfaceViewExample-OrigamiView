@@ -2,15 +2,18 @@ package com.serega.origamicontrol.origamicontrol.view;
 
 import android.annotation.TargetApi;
 import android.content.Context;
+import android.content.res.TypedArray;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.util.TypedValue;
 import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
-import com.serega.origamicontrol.origamicontrol.helpers.Config;
+import com.serega.origamicontrol.R;
+import com.serega.origamicontrol.origamicontrol.helpers.Constants;
 import com.serega.origamicontrol.origamicontrol.helpers.OrigamiAdapter;
 import com.serega.origamicontrol.origamicontrol.helpers.Segment;
 import com.serega.origamicontrol.origamicontrol.interfaces.GestureInfoProvider;
@@ -20,24 +23,27 @@ public class OrigamiView extends SurfaceView implements SurfaceHolder.Callback, 
 	private DrawThread drawThread;
 	private OrigamiAdapter adapter;
 	private int startIndex;
+	private Segment segment;
 
 	public OrigamiView(Context context) {
 		super(context);
+		init(context, null, 0, 0);
 	}
 
 	public OrigamiView(Context context, AttributeSet attrs) {
 		super(context, attrs);
-
-		init();
+		init(context, attrs, 0, 0);
 	}
 
 	public OrigamiView(Context context, AttributeSet attrs, int defStyle) {
 		super(context, attrs, defStyle);
+		init(context, attrs, defStyle, 0);
 	}
 
 	@TargetApi(21)
 	public OrigamiView(Context context, AttributeSet attrs, int defStyleAttr, int defStyleRes) {
 		super(context, attrs, defStyleAttr, defStyleRes);
+		init(context, attrs, defStyleAttr, defStyleRes);
 	}
 
 	@Override
@@ -51,14 +57,29 @@ public class OrigamiView extends SurfaceView implements SurfaceHolder.Callback, 
 		}
 	}
 
-	private void init() {
+	private void init(Context context, AttributeSet attrs, int defStyleAttr, int defStyleRes) {
 		getHolder().addCallback(this);
+		TypedArray array = context.getTheme().obtainStyledAttributes(attrs, R.styleable.OrigamiView, defStyleAttr, defStyleRes);
+		int indicatorColor = array.getInt(R.styleable.OrigamiView_origamiIndicatorColor, Constants.NOT_SET);
+		int currentIndicatorColor = array.getInt(R.styleable.OrigamiView_origamiCurrentIndicatorColor, Constants.NOT_SET);
+		int backgroundColor = array.getInt(R.styleable.OrigamiView_origamiBackgroundColor, Color.BLACK);
+		float horizontalCenterMargin = array.getDimension(R.styleable.OrigamiView_origamiCenterMargin, Constants.DEFAULT_GAP_DP);
+		boolean useShadow = array.getBoolean(R.styleable.OrigamiView_origamiDrawGradientShadow, false);
+		boolean useCenterOnly = array.getBoolean(R.styleable.OrigamiView_origamiUseCenterOnly, true);
+		array.recycle();
+
+		segment = new Segment((int) horizontalCenterMargin);
+		segment.setBackgroundColor(backgroundColor)
+				.setCurrentIndicatorColor(currentIndicatorColor)
+				.setIndicatorColor(indicatorColor)
+				.setDrawGradientShadow(useShadow)
+				.setUseCenterOnly(useCenterOnly);
 	}
 
 
 	@Override
 	public void surfaceCreated(SurfaceHolder holder) {
-		drawThread = new DrawThread();
+		drawThread = new DrawThread(segment);
 		drawThread.setAdapter(adapter);
 		drawThread.setRunning(true);
 		drawThread.start();
@@ -117,11 +138,8 @@ public class OrigamiView extends SurfaceView implements SurfaceHolder.Callback, 
 		private boolean inTouch;
 		private final Segment s;
 
-		DrawThread() {
-			float gap = dpToPix(Config.DEFAULT_GAP_DP);
-			float threshold = dpToPix(Config.DEFAULT_VIEV_OPENING_THRESHOLD_DP);
-			s = new Segment(gap);
-//			s.setViewOpeningThreshold(threshold);
+		DrawThread(Segment s) {
+			this.s = s;
 		}
 
 		private void setAdapter(OrigamiAdapter adapter) {
@@ -170,7 +188,6 @@ public class OrigamiView extends SurfaceView implements SurfaceHolder.Callback, 
 				if (canvas == null) {
 					return;
 				}
-
 				//If we doing some animation
 				if (s.isBusy()) {
 					s.processBusy();
@@ -198,7 +215,7 @@ public class OrigamiView extends SurfaceView implements SurfaceHolder.Callback, 
 		}
 
 		private void prepareTouch(float x, float y) {
-	        s.prepareTouch(y);
+			s.prepareTouch(y);
 		}
 	}
 

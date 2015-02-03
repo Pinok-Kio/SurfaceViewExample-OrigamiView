@@ -13,7 +13,7 @@ import com.serega.origamicontrol.origamicontrol.view.OrigamiView;
 import com.serega.origamicontrol.R;
 
 
-public class MainActivity extends ActionBarActivity implements GestureInfoProvider{
+public class OrigamiViewActivity extends ActionBarActivity implements GestureInfoProvider{
     private GestureObserver gestureObserver;
 
     @Override
@@ -32,7 +32,8 @@ public class MainActivity extends ActionBarActivity implements GestureInfoProvid
 			    R.mipmap.cat,
 			    R.mipmap.cobblepot,
 			    R.mipmap.bane,
-			    R.mipmap.jocker_dark
+			    R.mipmap.jocker_dark,
+			    R.mipmap.cat_white
 	    };
 
 	    OrigamiAdapter adapter = new OrigamiAdapter(this, bitmaps);
