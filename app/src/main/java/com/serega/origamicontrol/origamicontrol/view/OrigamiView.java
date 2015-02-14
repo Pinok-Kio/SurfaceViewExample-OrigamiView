@@ -64,7 +64,7 @@ public class OrigamiView extends SurfaceView implements SurfaceHolder.Callback, 
 		int currentIndicatorColor = array.getInt(R.styleable.OrigamiView_origamiCurrentIndicatorColor, Constants.NOT_SET);
 		int backgroundColor = array.getInt(R.styleable.OrigamiView_origamiBackgroundColor, Color.BLACK);
 		float horizontalCenterMargin = array.getDimension(R.styleable.OrigamiView_origamiCenterMargin, Constants.DEFAULT_GAP_DP);
-		boolean useShadow = array.getBoolean(R.styleable.OrigamiView_origamiDrawGradientShadow, false);
+		boolean useShadow = array.getBoolean(R.styleable.OrigamiView_origamiDrawGradientShadow, true);
 		boolean useCenterOnly = array.getBoolean(R.styleable.OrigamiView_origamiUseCenterOnly, true);
 		array.recycle();
 

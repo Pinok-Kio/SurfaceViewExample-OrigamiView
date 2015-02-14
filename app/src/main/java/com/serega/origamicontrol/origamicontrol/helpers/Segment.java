@@ -2,6 +2,9 @@ package com.serega.origamicontrol.origamicontrol.helpers;
 
 import android.graphics.*;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class Segment {
 	/**
 	 * Screen dimensions
@@ -29,32 +32,10 @@ public class Segment {
 	private final Rect bitmapAreaForRectBottom;
 
 	/**
-	 * Top center area
-	 */
-	private final RectF rectBitmapInnerTop;
-
-	/**
-	 * Bottom center area
-	 */
-	private final RectF rectBitmapInnerBottom;
-
-	/**
 	 * Inner screen area (rectBitmapInnerTop + rectBitmapInnerBottom)
 	 * Hidden bitmap showing here
 	 */
 	private final RectF innerRect;
-
-	/**
-	 * Original Bitmap area to show in rectBitmapInnerTop.
-	 * Required for take pixels from original bitmap and not create different bitmap for this region
-	 */
-	private final Rect bitmapTopSrc;
-
-	/**
-	 * Original Bitmap area to show in rectBitmapInnerBottom.
-	 * Required for take pixels from original bitmap and not create different bitmap for this region
-	 */
-	private final Rect bitmapBottomSrc;
 
 	/**
 	 * Matrix for inner (center) top bitmap drawing
@@ -65,9 +46,6 @@ public class Segment {
 	 * Matrix for inner (center) top bitmap drawing
 	 */
 	private final Matrix matrixBitmapBottom;
-
-	private final Matrix bottomGradientMatrix;
-	private final Matrix topGradientMatrix;
 
 	private final Paint paint;
 	private final Paint backgroundColorPaint;
@@ -82,9 +60,8 @@ public class Segment {
 	private float currentY;
 	private float touchY;
 	private float viewCenterYPoint;
+	private float gapCalculatingHeight;
 	private float currentGapFraction;
-	private float[] srcBottom;
-	private float[] srcTop;
 
 	private boolean moveTop;
 	private boolean isReady;
@@ -102,17 +79,29 @@ public class Segment {
 	private State currentState = State.STATE_WAIT;
 
 	private final float GAP;
-	private LinearGradient shadowGradientTop;
-	private LinearGradient shadowGradientBottom;
-
-	private final Paint topGradientPaint;
-	private final Paint bottomGradientPaint;
-
 	private float fingerPath;
 	private float viewOpeningThreshold = Constants.DEFAULT_VIEW_OPENING_THRESHOLD_DP;
 
 	private boolean nextBitmapPrepared;
 	private boolean prevBitmapPrepared;
+
+	private static final int SEGMENTS_COUNT = 6;
+	/**
+	 * Inner Rectangles
+	 */
+	private final List<RectF> innerBitmapsRectList = new ArrayList<>(SEGMENTS_COUNT);
+	/**
+	 * Bitmap Areas for inner rectangles
+	 * Required for taking pixels from original bitmap and not create different bitmap for current region
+	 */
+	private final List<Rect> innerBitmapSrc = new ArrayList<>(SEGMENTS_COUNT);
+
+	/**
+	 * Paint objects to draw shadow
+	 */
+	private final List<Paint> gradientPaints = new ArrayList<>(SEGMENTS_COUNT);
+
+	private float[][] srcTopBottom;
 
 	public enum State {
 		STATE_WAIT,
@@ -127,8 +116,6 @@ public class Segment {
 		rectAll = new RectF();
 		rectTop = new RectF();
 		rectBottom = new RectF();
-		rectBitmapInnerTop = new RectF();
-		rectBitmapInnerBottom = new RectF();
 		innerRect = new RectF();
 		bitmapAreaForRectBottom = new Rect();
 		bitmapAreaForRectTop = new Rect();
@@ -137,22 +124,15 @@ public class Segment {
 		matrixBitmapTop = new Matrix();
 		matrixBitmapBottom = new Matrix();
 		paint = new Paint();
-		bitmapTopSrc = new Rect();
-		bitmapBottomSrc = new Rect();
 		backgroundColorPaint = new Paint();
 		backgroundColorPaint.setColor(Color.BLACK);
 
-		if (drawGradientShadow) {
-			bottomGradientMatrix = new Matrix();
-			topGradientMatrix = new Matrix();
-			topGradientPaint = new Paint();
-			bottomGradientPaint = new Paint();
-		} else {
-			bottomGradientMatrix = null;
-			topGradientMatrix = null;
-			topGradientPaint = null;
-			bottomGradientPaint = null;
+		for (int i = 0; i < SEGMENTS_COUNT; i++) {
+			innerBitmapsRectList.add(new RectF());
+			innerBitmapSrc.add(new Rect());
 		}
+
+		srcTopBottom = new float[SEGMENTS_COUNT][];
 	}
 
 	public void drawOrig(Canvas canvas) {
@@ -191,8 +171,10 @@ public class Segment {
 
 		float width = rectAll.width();
 
-		rectBitmapInnerTop.set(0, y, width, y);
-		rectBitmapInnerBottom.set(0, y, width, y);
+		for (RectF r : innerBitmapsRectList) {
+			r.set(0, y, width, y);
+		}
+
 		innerRect.set(0, y, width, y);
 
 		if (drawGradientShadow) {
@@ -331,8 +313,16 @@ public class Segment {
 
 	private void resizeInnerRect() {
 		innerRect.set(0, rectTop.bottom, rectAll.width(), rectBottom.top);
-		rectBitmapInnerTop.set(0, innerRect.top, innerRect.right, innerRect.centerY());
-		rectBitmapInnerBottom.set(0, innerRect.centerY(), innerRect.right, innerRect.bottom);
+		float fStep = innerRect.height() / SEGMENTS_COUNT;
+		for (int i = 0; i < SEGMENTS_COUNT; i++) {
+			RectF r = innerBitmapsRectList.get(i);
+			if (i == 0) {
+				r.set(0, innerRect.top, innerRect.right, innerRect.top + fStep);
+			} else {
+				RectF prevR = innerBitmapsRectList.get(i - 1);
+				r.set(0, prevR.bottom, innerRect.right, prevR.bottom + fStep);
+			}
+		}
 	}
 
 	private void openingRegionBottom() {
@@ -388,76 +378,67 @@ public class Segment {
 
 	private void drawBitmapTop(Canvas canvas) {
 		if (innerBitmap != null) {
-			prepareBitmapTopMatrix();
-			canvas.drawRect(rectBitmapInnerTop, backgroundColorPaint);
-			canvas.save();
-			canvas.concat(matrixBitmapTop);
-			canvas.drawBitmap(innerBitmap, bitmapTopSrc, bitmapTopSrc, paint);
-			if (drawGradientShadow) {
-				int alpha = calculateAlpha(rectBitmapInnerTop.height());
-				topGradientPaint.setAlpha(alpha);
-				canvas.drawRect(0, 0, rectAll.width(), viewCenterYPoint, topGradientPaint);
+			for (int i = 0; i < SEGMENTS_COUNT; i += 2) {
+				RectF rect = innerBitmapsRectList.get(i);
+				Paint gradientPain = gradientPaints.get(i);
+				prepareBitmapTopMatrix(rect, srcTopBottom[i]);
+				canvas.drawRect(rect, backgroundColorPaint);
+				canvas.save();
+				canvas.concat(matrixBitmapTop);
+				Rect r = innerBitmapSrc.get(i);
+				canvas.drawBitmap(innerBitmap, r, r, paint);
+				if (drawGradientShadow) {
+					int alpha = calculateAlpha(rect.height());
+					gradientPain.setAlpha(alpha);
+					canvas.drawRect(0, r.top, rectAll.width(), r.bottom, gradientPain);
+				}
+				canvas.restore();
 			}
-			canvas.restore();
 		}
 	}
 
-	private void prepareBitmapTopMatrix() {
-		float gap = calculateGap(rectBitmapInnerTop.height());
+	private void prepareBitmapTopMatrix(RectF rect, float[] src) {
+		float gap = calculateGap(rect.height());
 
 		float[] dst = {
-				0, rectBitmapInnerTop.top, rectBitmapInnerTop.width(), rectBitmapInnerTop.top,
-				gap, rectBitmapInnerTop.bottom, rectBitmapInnerTop.width() - gap, rectBitmapInnerTop.bottom
+				0, rect.top, rect.width(), rect.top,
+				gap, rect.bottom, rect.width() - gap, rect.bottom
 		};
 
-		matrixBitmapTop.setPolyToPoly(srcTop, 0, dst, 0, srcTop.length / 2);
-
-		if (drawGradientShadow) {
-			if (!useCenterPoint) {
-				shadowGradientTop = new LinearGradient(0, rectBitmapInnerTop.top, 0, rectBitmapInnerTop.bottom,
-						Color.TRANSPARENT, Color.BLACK, Shader.TileMode.CLAMP);
-				shadowGradientTop.setLocalMatrix(matrixBitmapTop);
-			}
-		}
+		matrixBitmapTop.setPolyToPoly(src, 0, dst, 0, src.length / 2);
 	}
 
 
 	private void drawBitmapBottom(Canvas canvas) {
-
 		if (innerBitmap != null) {
-			prepareBitmapBottomMatrix();
-			canvas.drawRect(rectBitmapInnerBottom, backgroundColorPaint);
-			canvas.save();
-			canvas.concat(matrixBitmapBottom);
-			canvas.drawBitmap(innerBitmap, bitmapBottomSrc, bitmapTopSrc, paint);
-			if (drawGradientShadow) {
-				int alpha = calculateAlpha(rectBitmapInnerBottom.height());
-				bottomGradientPaint.setAlpha(alpha);
-				canvas.drawRect(0, 0, rectAll.width(), viewCenterYPoint, bottomGradientPaint);
+			for (int i = 1; i < SEGMENTS_COUNT; i += 2) {
+				RectF rect = innerBitmapsRectList.get(i);
+				Paint gradientPaint = gradientPaints.get(i);
+				prepareBitmapBottomMatrix(rect, srcTopBottom[i]);
+				canvas.drawRect(rect, backgroundColorPaint);
+				canvas.save();
+				canvas.concat(matrixBitmapBottom);
+				Rect r = innerBitmapSrc.get(i);
+				canvas.drawBitmap(innerBitmap, r, r, paint);
+				if (drawGradientShadow) {
+					int alpha = calculateAlpha(rect.height());
+					gradientPaint.setAlpha(alpha);
+					canvas.drawRect(0, r.top, rectAll.width(), r.bottom, gradientPaint);
+				}
+				canvas.restore();
 			}
-			canvas.restore();
 		}
 	}
 
-	private void prepareBitmapBottomMatrix() {
-		float gap = calculateGap(rectBitmapInnerBottom.height());
-
+	private void prepareBitmapBottomMatrix(RectF rect, float[] src) {
+		float gap = calculateGap(rect.height());
+		matrixBitmapBottom.reset();
 		float[] dst = {
-				gap, rectBitmapInnerBottom.top, rectBitmapInnerBottom.width() - gap, rectBitmapInnerBottom.top,
-				0, rectBitmapInnerBottom.bottom, rectBitmapInnerBottom.width(), rectBitmapInnerBottom.bottom
+				gap, rect.top, rect.width() - gap, rect.top,
+				0, rect.bottom, rect.width(), rect.bottom
 		};
 
-		matrixBitmapBottom.setPolyToPoly(srcBottom, 0, dst, 0, srcBottom.length / 2);
-
-		if (drawGradientShadow) {
-			if (!useCenterPoint) {
-				shadowGradientBottom = new LinearGradient(0, rectBitmapInnerBottom.top, 0, rectBitmapInnerBottom.bottom,
-						Color.BLACK, Color.TRANSPARENT, Shader.TileMode.CLAMP);
-				bottomGradientMatrix.set(matrixBitmapBottom);
-				bottomGradientMatrix.postScale(1, 0.5f);
-				shadowGradientBottom.setLocalMatrix(bottomGradientMatrix);
-			}
-		}
+		matrixBitmapBottom.setPolyToPoly(src, 0, dst, 0, src.length / 2);
 	}
 
 	private void drawAreaTop(Canvas canvas) {
@@ -627,38 +608,53 @@ public class Segment {
 	public Segment setRectAll(float left, float top, float right, float bottom) {
 		rectAll.set(left, top, right, bottom);
 		viewCenterYPoint = rectAll.centerY();
+		gapCalculatingHeight = rectAll.height() / SEGMENTS_COUNT;
+
 
 		DISTANCE_STEP = viewCenterYPoint / Constants.STEPS_COUNT;
 
-		bitmapTopSrc.set(0, 0, (int) rectAll.width(), (int) viewCenterYPoint);
-		bitmapBottomSrc.set(0, (int) (rectAll.height() - viewCenterYPoint), (int) rectAll.width(), (int) rectAll.height());
+		int step = (int) (rectAll.height() / SEGMENTS_COUNT);
 
-		srcTop = new float[]{
-				0, 0, bitmapTopSrc.right, 0,
-				0, bitmapTopSrc.bottom, bitmapTopSrc.right, bitmapTopSrc.bottom
-		};
+		for (int i = 0; i < SEGMENTS_COUNT; i++) {
+			if (i == 0) {
+				innerBitmapSrc.get(i).set(0, 0, (int) rectAll.width(), step);
+			} else {
+				Rect prev = innerBitmapSrc.get(i - 1);
+				innerBitmapSrc.get(i).set(0, prev.bottom, prev.width(), prev.bottom + step);
+			}
 
-
-		srcBottom = new float[]{
-				0, 0, bitmapBottomSrc.width(), 0,
-				0, bitmapBottomSrc.height(), bitmapBottomSrc.width(), bitmapBottomSrc.height()
-		};
-
+			Rect current = innerBitmapSrc.get(i);
+			srcTopBottom[i] = new float[]{
+					0, current.top, current.right, current.top,
+					0, current.bottom, current.right, current.bottom
+			};
+		}
 		return this;
 	}
 
 	private void initGradients() {
-		shadowGradientTop = new LinearGradient(0, 0, 0, viewCenterYPoint, Color.TRANSPARENT, Color.BLACK, Shader.TileMode.CLAMP);
-		shadowGradientBottom = new LinearGradient(0, 0, 0, rectAll.bottom, Color.BLACK, Color.TRANSPARENT, Shader.TileMode.CLAMP);
-
-		topGradientPaint.setShader(shadowGradientTop);
-		bottomGradientPaint.setShader(shadowGradientBottom);
-		topGradientPaint.setStyle(Paint.Style.FILL);
-		bottomGradientPaint.setStyle(Paint.Style.FILL);
+		for (int i = 0; i < SEGMENTS_COUNT; i++) {
+			int initValue = (int) (i * gapCalculatingHeight);
+			if (i % 2 == 0) {
+				LinearGradient gradientTop = new LinearGradient(0, initValue + gapCalculatingHeight, 0, initValue,
+						Color.BLACK, Color.TRANSPARENT, Shader.TileMode.CLAMP);
+				Paint topPaint = new Paint();
+				topPaint.setShader(gradientTop);
+				topPaint.setStyle(Paint.Style.FILL);
+				gradientPaints.add(topPaint);
+			} else {
+				LinearGradient gradientBottom = new LinearGradient(0, initValue, 0,
+						initValue + 1.5F * gapCalculatingHeight, Color.BLACK, Color.TRANSPARENT, Shader.TileMode.CLAMP);
+				Paint bottomPaint = new Paint();
+				bottomPaint.setShader(gradientBottom);
+				bottomPaint.setStyle(Paint.Style.FILL);
+				gradientPaints.add(bottomPaint);
+			}
+		}
 	}
 
 	private float calculateGapFactor(float currentHeight) {
-		currentGapFraction = currentHeight / viewCenterYPoint;
+		currentGapFraction = currentHeight / gapCalculatingHeight;
 		return currentGapFraction;
 	}
 
